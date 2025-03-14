@@ -1,0 +1,32 @@
+{
+  "name": "mcp-ansc-server",
+  "version": "0.1.0",
+  "description": "MCP server for accessing Moldova's National Agency for the Resolution of Appeals (ANSC) data",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "start": "node build/index.js",
+    "dev": "ts-node-esm src/index.ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "mcp",
+    "ansc",
+    "moldova",
+    "appeals"
+  ],
+  "author": "Ion Nalyk Calmis",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "axios": "^1.6.7",
+    "cheerio": "^1.0.0-rc.12",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
