@@ -2,6 +2,7 @@ import { CallToolRequestSchema, McpError, ErrorCode } from '@modelcontextprotoco
 import { AnscClient } from '../api/ansc-client.js';
 import { AppealSearchParams } from '../models/appeals.js';
 import { DecisionSearchParams } from '../models/decisions.js';
+import { PaginationParams } from '../models/pagination.js';
 
 const client = new AnscClient();
 
@@ -13,7 +14,7 @@ export const toolHandlers = {
     tools: [
       {
         name: 'search_appeals',
-        description: 'Search appeals with optional filters',
+        description: 'Search appeals with optional filters and pagination',
         inputSchema: {
           type: 'object',
           properties: {
@@ -40,13 +41,24 @@ export const toolHandlers = {
               description: 'Appeal status code (1-19)',
               minimum: 1,
               maximum: 19
+            },
+            page: {
+              type: 'number',
+              description: 'Page number (0-based, defaults to 0)',
+              minimum: 0
+            },
+            perPage: {
+              type: 'number',
+              description: 'Results per page (defaults to 30)',
+              minimum: 1,
+              maximum: 100
             }
           }
         }
       },
       {
         name: 'search_decisions',
-        description: 'Search decisions with optional filters',
+        description: 'Search decisions with optional filters and pagination',
         inputSchema: {
           type: 'object',
           properties: {
@@ -103,6 +115,17 @@ export const toolHandlers = {
             appealNumber: {
               type: 'string',
               description: 'Appeal registration number (e.g., 02/279/25)'
+            },
+            page: {
+              type: 'number',
+              description: 'Page number (0-based, defaults to 0)',
+              minimum: 0
+            },
+            perPage: {
+              type: 'number',
+              description: 'Results per page (defaults to 30)',
+              minimum: 1,
+              maximum: 100
             }
           }
         }
@@ -133,21 +156,23 @@ export const toolHandlers = {
  */
 async function handleSearchAppeals(args: any) {
   try {
-    const params: AppealSearchParams = {
+    const params: AppealSearchParams & PaginationParams = {
       year: args.year,
       authority: args.authority,
       challenger: args.challenger,
       procedureNumber: args.procedureNumber,
-      status: args.status
+      status: args.status,
+      page: args.page,
+      perPage: args.perPage
     };
 
-    const appeals = await client.searchAppeals(params);
+    const result = await client.searchAppeals(params);
 
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(appeals, null, 2)
+          text: JSON.stringify(result, null, 2)
         }
       ]
     };
@@ -169,7 +194,7 @@ async function handleSearchAppeals(args: any) {
  */
 async function handleSearchDecisions(args: any) {
   try {
-    const params: DecisionSearchParams = {
+    const params: DecisionSearchParams & PaginationParams = {
       year: args.year,
       authority: args.authority,
       challenger: args.challenger,
@@ -178,16 +203,18 @@ async function handleSearchDecisions(args: any) {
       decisionContent: args.decisionContent,
       appealGrounds: args.appealGrounds,
       complaintObject: args.complaintObject,
-      appealNumber: args.appealNumber
+      appealNumber: args.appealNumber,
+      page: args.page,
+      perPage: args.perPage
     };
 
-    const decisions = await client.searchDecisions(params);
+    const result = await client.searchDecisions(params);
 
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(decisions, null, 2)
+          text: JSON.stringify(result, null, 2)
         }
       ]
     };

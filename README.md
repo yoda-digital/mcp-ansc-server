@@ -17,6 +17,8 @@ This server provides access to the [ANSC](https://www.ansc.md/) website, allowin
      * Challenger
      * Procedure Number (OCDS ID)
      * Status
+     * Page number (0-based, defaults to 0)
+     * Results per page (defaults to 30)
 
 2. `search_decisions`
    - Search decisions on appeals with filters:
@@ -29,16 +31,20 @@ This server provides access to the [ANSC](https://www.ansc.md/) website, allowin
      * Appeal Grounds
      * Complaint Object
      * Appeal Number
+     * Page number (0-based, defaults to 0)
+     * Results per page (defaults to 30)
 
 ### Resources
 
 - Static Resources:
-  * `ansc://appeals/current-year` - Appeals under review for the current year
-  * `ansc://decisions/current-year` - Decisions on appeals for the current year
+  * `ansc://appeals/current-year[?page={page}]` - Appeals under review for the current year
+  * `ansc://decisions/current-year[?page={page}]` - Decisions on appeals for the current year
 
 - Resource Templates:
-  * `ansc://appeals/{year}` - Appeals under review for a specific year
-  * `ansc://decisions/{year}` - Decisions on appeals for a specific year
+  * `ansc://appeals/{year}[?page={page}]` - Appeals under review for a specific year
+  * `ansc://decisions/{year}[?page={page}]` - Decisions on appeals for a specific year
+
+All resources and search results are paginated with 30 items per page.
 
 ## Installation
 
@@ -99,6 +105,22 @@ Once the server is connected to your MCP client, you can use queries like:
 - "Show appeals related to MTender procedure ocds-b3wdp1-MD-1740472744894"
 - "Get current year decisions"
 - "Search for appeals with status 'Under review'"
+- "Get page 2 of appeals from 2024"
+- "Show next page of decisions"
+
+## Pagination
+
+All search results and resources are paginated with 30 items per page. The pagination information includes:
+- Current page number (0-based)
+- Total number of pages
+- Items per page (30)
+- Whether there are next/previous pages
+
+When using tools or resources:
+- Page numbers are 0-based (0 for first page, 1 for second page, etc.)
+- Default page size is 30 items
+- Page parameter can be specified in resource URIs: `ansc://appeals/2024?page=1`
+- Tools accept page parameter: `{ "page": 1 }`
 
 ## Error Handling
 
@@ -107,6 +129,7 @@ The server includes comprehensive error handling for:
 - Invalid search parameters
 - HTML parsing failures
 - Rate limiting
+- Invalid page numbers
 
 ## Future Features
 

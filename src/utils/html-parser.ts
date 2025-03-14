@@ -1,12 +1,13 @@
 import * as cheerio from 'cheerio';
 import { Appeal, AppealStatus } from '../models/appeals.js';
 import { Decision } from '../models/decisions.js';
+import { PaginatedResponse } from '../models/pagination.js';
 
 export class HtmlParser {
   /**
    * Parse appeals table from HTML content
    */
-  static parseAppealsTable(html: string): Appeal[] {
+  static parseAppealsTable(html: string, requestedPage: number = 0): PaginatedResponse<Appeal> {
     const $ = cheerio.load(html);
     const appeals: Appeal[] = [];
 
@@ -37,13 +38,19 @@ export class HtmlParser {
       appeals.push(appeal);
     });
 
-    return appeals;
+    // Parse pagination information
+    const pagination = this.parsePagination($, requestedPage);
+
+    return {
+      items: appeals,
+      pagination
+    };
   }
 
   /**
    * Parse decisions table from HTML content
    */
-  static parseDecisionsTable(html: string): Decision[] {
+  static parseDecisionsTable(html: string, requestedPage: number = 0): PaginatedResponse<Decision> {
     const $ = cheerio.load(html);
     const decisions: Decision[] = [];
 
@@ -69,7 +76,63 @@ export class HtmlParser {
       decisions.push(decision);
     });
 
-    return decisions;
+    // Parse pagination information
+    const pagination = this.parsePagination($, requestedPage);
+
+    return {
+      items: decisions,
+      pagination
+    };
+  }
+
+  /**
+   * Parse pagination information from the page
+   * @param $ Cheerio instance
+   * @param requestedPage 0-based page number that was requested
+   * @returns Pagination information
+   */
+  private static parsePagination($: cheerio.CheerioAPI, requestedPage: number) {
+    // Get current page (1-based in HTML)
+    const currentPageEl = $('.pager-current');
+    const displayedPage = parseInt(currentPageEl.text().trim(), 10) || 1;
+
+    // Get total pages from last page link
+    const lastPageLink = $('.pager-last a').attr('href') || '';
+    const lastPageMatch = lastPageLink.match(/page=(\d+)/);
+    let totalPages = 1;
+
+    if (lastPageMatch) {
+      // Convert from 0-based URL parameter to 1-based page count
+      totalPages = parseInt(lastPageMatch[1], 10) + 1;
+    } else {
+      // If no last page link, count page items
+      const pageItems = $('.pager-item, .pager-current');
+      totalPages = pageItems.length > 0 ? 
+        Math.max(...pageItems.map((_, el) => {
+          const pageNum = parseInt($(el).text().trim(), 10);
+          return isNaN(pageNum) ? 0 : pageNum;
+        }).get()) : 1;
+    }
+
+    // Check for next/prev links
+    const hasNextPage = $('.pager-next').length > 0;
+    const hasPrevPage = $('.pager-previous').length > 0;
+
+    // Convert displayed 1-based page number to 0-based
+    const currentPage = displayedPage - 1;
+
+    // Validate that our parsing matches the requested page
+    if (currentPage !== requestedPage) {
+      console.error(`Page number mismatch: requested ${requestedPage}, got ${currentPage}`);
+    }
+
+    return {
+      currentPage,          // 0-based for API consistency
+      totalPages,           // Total number of pages
+      perPage: 30,         // ANSC uses 30 items per page
+      hasNextPage,         // Whether there is a next page
+      hasPrevPage          // Whether there is a previous page
+    };
   }
 
   /**

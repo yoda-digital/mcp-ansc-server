@@ -12,13 +12,13 @@ export const resourceHandlers = {
       {
         uri: `ansc://appeals/current-year`,
         name: 'Current year appeals',
-        description: 'Appeals under review for the current year',
+        description: 'Appeals under review for the current year (paginated, 30 items per page)',
         mimeType: 'application/json'
       },
       {
         uri: `ansc://decisions/current-year`,
         name: 'Current year decisions',
-        description: 'Decisions on appeals for the current year',
+        description: 'Decisions on appeals for the current year (paginated, 30 items per page)',
         mimeType: 'application/json'
       }
     ]
@@ -30,15 +30,15 @@ export const resourceHandlers = {
   listResourceTemplates: async () => ({
     resourceTemplates: [
       {
-        uriTemplate: 'ansc://appeals/{year}',
+        uriTemplate: 'ansc://appeals/{year}[?page={page}]',
         name: 'Appeals by year',
-        description: 'Appeals under review for a specific year',
+        description: 'Appeals under review for a specific year (paginated, 30 items per page)',
         mimeType: 'application/json'
       },
       {
-        uriTemplate: 'ansc://decisions/{year}',
+        uriTemplate: 'ansc://decisions/{year}[?page={page}]',
         name: 'Decisions by year',
-        description: 'Decisions on appeals for a specific year',
+        description: 'Decisions on appeals for a specific year (paginated, 30 items per page)',
         mimeType: 'application/json'
       }
     ]
@@ -50,9 +50,13 @@ export const resourceHandlers = {
   readResource: async (request: { params: { uri: string } }) => {
     const uri = request.params.uri;
 
+    // Parse page parameter from URI if present
+    const pageMatch = uri.match(/[?&]page=(\d+)/);
+    const page = pageMatch ? parseInt(pageMatch[1], 10) : 0;
+
     // Static resources for current year
-    if (uri === 'ansc://appeals/current-year') {
-      const appeals = await client.searchAppeals({});
+    if (uri.startsWith('ansc://appeals/current-year')) {
+      const appeals = await client.searchAppeals({ page });
       return {
         contents: [
           {
@@ -64,8 +68,8 @@ export const resourceHandlers = {
       };
     }
 
-    if (uri === 'ansc://decisions/current-year') {
-      const decisions = await client.searchDecisions({});
+    if (uri.startsWith('ansc://decisions/current-year')) {
+      const decisions = await client.searchDecisions({ page });
       return {
         contents: [
           {
@@ -78,7 +82,7 @@ export const resourceHandlers = {
     }
 
     // Dynamic resources by year
-    const appealsMatch = uri.match(/^ansc:\/\/appeals\/(\d{4})$/);
+    const appealsMatch = uri.match(/^ansc:\/\/appeals\/(\d{4})/);
     if (appealsMatch) {
       const year = parseInt(appealsMatch[1], 10);
       if (isNaN(year) || year < 2000 || year > 9999) {
@@ -88,7 +92,7 @@ export const resourceHandlers = {
         );
       }
 
-      const appeals = await client.searchAppeals({ year });
+      const appeals = await client.searchAppeals({ year, page });
       return {
         contents: [
           {
@@ -100,7 +104,7 @@ export const resourceHandlers = {
       };
     }
 
-    const decisionsMatch = uri.match(/^ansc:\/\/decisions\/(\d{4})$/);
+    const decisionsMatch = uri.match(/^ansc:\/\/decisions\/(\d{4})/);
     if (decisionsMatch) {
       const year = parseInt(decisionsMatch[1], 10);
       if (isNaN(year) || year < 2000 || year > 9999) {
@@ -110,7 +114,7 @@ export const resourceHandlers = {
         );
       }
 
-      const decisions = await client.searchDecisions({ year });
+      const decisions = await client.searchDecisions({ year, page });
       return {
         contents: [
           {

@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { Appeal, AppealSearchParams } from '../models/appeals.js';
 import { Decision, DecisionSearchParams } from '../models/decisions.js';
+import { PaginatedResponse, PaginationParams } from '../models/pagination.js';
 import { HtmlParser } from '../utils/html-parser.js';
 
 export class AnscClient {
@@ -18,9 +19,11 @@ export class AnscClient {
   }
 
   /**
-   * Search appeals with optional filters
+   * Search appeals with optional filters and pagination
+   * @param params Search and pagination parameters
+   * @returns Paginated list of appeals
    */
-  async searchAppeals(params: AppealSearchParams): Promise<Appeal[]> {
+  async searchAppeals(params: AppealSearchParams & PaginationParams): Promise<PaginatedResponse<Appeal>> {
     const year = params.year || new Date().getFullYear();
     const queryParams = new URLSearchParams();
 
@@ -38,11 +41,20 @@ export class AnscClient {
       queryParams.append('solr_document', params.status.toString());
     }
 
-    const url = `/ro/contestatii/${year}?${queryParams.toString()}`;
+    // Add pagination parameter if not first page
+    // Convert from 0-based to ANSC's 1-based page numbers
+    if (params.page && params.page > 0) {
+      queryParams.append('page', params.page.toString());
+    }
+
+    const url = `/ro/contestatii/${year}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     
     try {
-      const response = await this.axiosInstance.get(url);
-      return HtmlParser.parseAppealsTable(response.data);
+      const response = await this.axiosInstance.get(url, {
+        // Skip SSL certificate verification as ANSC's cert might be invalid
+        httpsAgent: new (await import('https')).Agent({ rejectUnauthorized: false })
+      });
+      return HtmlParser.parseAppealsTable(response.data, params.page || 0);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(`Failed to fetch appeals: ${error.message}`);
@@ -52,9 +64,11 @@ export class AnscClient {
   }
 
   /**
-   * Search decisions with optional filters
+   * Search decisions with optional filters and pagination
+   * @param params Search and pagination parameters
+   * @returns Paginated list of decisions
    */
-  async searchDecisions(params: DecisionSearchParams): Promise<Decision[]> {
+  async searchDecisions(params: DecisionSearchParams & PaginationParams): Promise<PaginatedResponse<Decision>> {
     const year = params.year || new Date().getFullYear();
     const queryParams = new URLSearchParams();
 
@@ -90,11 +104,20 @@ export class AnscClient {
       queryParams.append('solr_document_8', params.appealNumber);
     }
 
-    const url = `/ro/content/decizii-${year}?${queryParams.toString()}`;
+    // Add pagination parameter if not first page
+    // Convert from 0-based to ANSC's 1-based page numbers
+    if (params.page && params.page > 0) {
+      queryParams.append('page', params.page.toString());
+    }
+
+    const url = `/ro/content/decizii-${year}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     
     try {
-      const response = await this.axiosInstance.get(url);
-      return HtmlParser.parseDecisionsTable(response.data);
+      const response = await this.axiosInstance.get(url, {
+        // Skip SSL certificate verification as ANSC's cert might be invalid
+        httpsAgent: new (await import('https')).Agent({ rejectUnauthorized: false })
+      });
+      return HtmlParser.parseDecisionsTable(response.data, params.page || 0);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(`Failed to fetch decisions: ${error.message}`);
